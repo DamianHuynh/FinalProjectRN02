@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import {Formik} from 'formik';
 import * as Yup from 'yup';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {userLogin} from '../../apis/userLoginApi';
+import {getAccessToken, setAccessToken} from '../../utils/storage';
+import {useDispatch} from 'react-redux';
+import {LoginButton} from 'react-native-fbsdk-next';
 
 const loginSchema = Yup.object().shape({
   email: Yup.string()
@@ -22,31 +24,19 @@ const loginSchema = Yup.object().shape({
     .required('Password không được bỏ trống'),
 });
 
-const setAccessToken = async value => {
-  try {
-    await AsyncStorage.setItem('accessToken', value);
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const getAccessToken = async () => {
-  try {
-    const accessToken = await AsyncStorage.getItem('accessToken');
-    console.log(accessToken);
-    return accessToken;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
 const LoginScreen = () => {
+  const dispatch = useDispatch();
+
   const handleSubmitFormik = values => {
     userLogin(values)
       .then(res => {
         if (res.data.statusCode === 200) {
           console.log('handleSubmitFormik', res.data.content.accessToken);
           setAccessToken(res.data.content.accessToken);
+          dispatch({
+            type: 'SET_ACCESS_TOKEN',
+            payload: res.data.content.accessToken,
+          });
         }
       })
       .catch(err => console.log(err));
@@ -105,6 +95,15 @@ const LoginScreen = () => {
           }}>
           <Text>Get accessToken</Text>
         </TouchableOpacity>
+        <LoginButton
+          onLoginFinished={(error, result) => {
+            if (error) {
+              console.log('login has error: ' + result.error);
+            } else if (result.isCancelled) {
+              console.log('login is cancelled.');
+            }
+          }}
+        />
       </View>
     </SafeAreaView>
   );
